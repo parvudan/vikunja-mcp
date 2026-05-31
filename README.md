@@ -1,36 +1,116 @@
 # Vikunja MCP Server
 
-[![npm version](https://img.shields.io/npm/v/@aimbitgmbh/vikunja-mcp)](https://npmjs.com/package/@aimbitgmbh/vikunja-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This is a Model Context Protocol (MCP) server that provides integration with [Vikunja](https://vikunja.io/), a self-hosted open-source task management application. It enables MCP clients to interact with Vikunja tasks, projects, labels, and collaboration features.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server for [Vikunja](https://vikunja.io/), enabling AI assistants to manage tasks and projects via MCP.
 
-Tested and optimized for **gpt-oss:20b**.
+This fork extends the [original aimbitgmbh/vikunja-mcp](https://github.com/aimbitgmbh/vikunja-mcp) with:
+- **Vikunja v1.0.0+ compatibility** (API endpoint changes)
+- **Native HTTP transport** for OpenWebUI and remote clients (no supergateway)
+- **Docker containerization** with security hardening
+- **Subtask visibility** in task listings
+- **Task moving** between projects via `task_update`
+- **Fixed bulk update** to match the Vikunja v1.0.0 API format
+
+---
 
 ## Prerequisites
 
-- Node.js >= 18.0.0
-- A running Vikunja instance (self-hosted or cloud)
+- A running Vikunja instance v1.0.0+ (self-hosted)
 - Vikunja API token
+- Docker (for containerized deployment) or Node.js >= 18
 
-## Features
+---
 
-- Complete task and project management via MCP
-- Advanced features: kanban views, buckets, saved filters, bulk operations
-- Safety controls: destructive operations disabled by default
-- Type-safe implementation with TypeScript and Zod validation
+## Quick Start — Docker (recommended)
 
-## Installation
-
-### NPM Package
+### 1. Configure environment
 
 ```bash
-npx @aimbitgmbh/vikunja-mcp
+cp .env.example .env
 ```
 
-### MCP Client Configuration
+Edit `.env`:
 
-Add to your MCP client configuration:
+```bash
+VIKUNJA_URL=https://your-vikunja-instance.com/api/v1
+VIKUNJA_API_TOKEN=your-api-token-here
+```
+
+> **Note:** `VIKUNJA_URL` must include `/api/v1` at the end.
+
+### 2. Build and run
+
+```bash
+docker compose up --build -d
+```
+
+The server starts on port **8000** and exposes:
+- `http://localhost:8000/mcp` — MCP Streamable HTTP endpoint
+- `http://localhost:8000/health` — health check
+
+---
+
+## Transport modes
+
+The server supports two transport modes selected via the `PORT` environment variable:
+
+| Mode | When | Use case |
+|------|------|----------|
+| **HTTP** (Streamable HTTP) | `PORT` is set (default: 8000 in Docker) | OpenWebUI, remote clients |
+| **stdio** | `PORT` is unset | Claude Desktop, local MCP clients |
+
+---
+
+## Connecting to OpenWebUI
+
+In OpenWebUI go to **Admin Panel → Settings → Tools** and add:
+
+```
+http://<host-ip>:8000/mcp
+```
+
+Replace `<host-ip>` with the IP of the machine running the container, reachable from the OpenWebUI server.
+
+### Recommended system prompt
+
+Add this to your model's system prompt for reliable tool use:
+
+```
+You have access to Vikunja task management tools. Follow these rules strictly.
+
+## IDs
+- Task IDs and Project IDs are different numbers. Listings show [Task ID: X, Project ID: Y].
+- Never guess or infer a task ID from position in a list or from context.
+
+## Workflow for any write operation (complete, update, delete)
+1. Call tasks_list_all to get the current list with IDs.
+2. Use the search parameter to find tasks by name.
+3. Tasks can have subtasks — check the listing for indented entries.
+4. Call task_get to confirm the current state before acting.
+5. If already in the desired state, report it and do nothing.
+
+## Completing a task
+- Use task_complete with the exact task ID.
+- If already complete, confirm this instead of acting.
+
+## Moving tasks between projects
+- Use task_update with projectId to move a task.
+- Use projects_list to find the target project ID first.
+
+## Bulk updates
+- tasks_bulk_update updates ONE field across multiple tasks per call.
+- For multiple fields, call it once per field.
+
+## Creating tasks
+- projectId is required. Get project IDs from projects_list first.
+```
+
+---
+
+## Connecting to Claude Desktop / Claude Code (stdio mode)
+
+For stdio-based clients, omit the `PORT` variable and use the npx command:
 
 ```json
 {
@@ -47,134 +127,125 @@ Add to your MCP client configuration:
 }
 ```
 
-**Important:** The `VIKUNJA_URL` must include `/api/v1` at the end.
+For a locally built version via Claude Code, add `.mcp.json` at the project root:
+
+```json
+{
+  "mcpServers": {
+    "vikunja": {
+      "type": "http",
+      "url": "http://<host-ip>:8000/mcp"
+    }
+  }
+}
+```
+
+---
 
 ## Configuration
 
-### Generate API Token
+### Environment variables
 
-1. Log into your Vikunja instance
-2. Navigate to Settings > API Tokens
-3. Click "Create a new token"
-4. Copy the token value
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VIKUNJA_URL` | Yes | — | Vikunja API URL including `/api/v1` |
+| `VIKUNJA_API_TOKEN` | Yes | — | API token from Vikunja Settings → API Tokens |
+| `PORT` | No | — | Set to enable HTTP mode (e.g. `8000`) |
+| `VERIFY_SSL` | No | `true` | Set to `false` for self-signed certificates |
+| `ENABLE_TASK_DELETE` | No | `false` | Enable permanent task deletion |
+| `ENABLE_PROJECT_DELETE` | No | `false` | Enable permanent project deletion |
+| `ENABLE_LABEL_DELETE` | No | `false` | Enable permanent label deletion |
 
-### Environment Variables
+---
 
-For local development, create a `.env` file:
-
-```bash
-# Vikunja API configuration (required)
-VIKUNJA_URL=https://your-vikunja-instance.com/api/v1
-VIKUNJA_API_TOKEN=your-api-token-here
-
-# Optional settings
-VERIFY_SSL=true
-
-# Safety controls (default: false - safe mode)
-ENABLE_PROJECT_DELETE=false
-ENABLE_LABEL_DELETE=false
-ENABLE_TASK_DELETE=false
-```
-
-## Available Tools
+## Available tools
 
 ### Tasks
-- `tasks_list` - List tasks with filtering
-- `tasks_list_all` - List tasks across all projects
-- `tasks_get` - Get task details
-- `tasks_create` - Create new task
-- `tasks_update` - Update existing task
-- `task_complete` - Mark task as complete
-- `task_delete` - Delete task (requires opt-in)
-- `tasks_bulk_update` - Update multiple tasks
+| Tool | Description |
+|------|-------------|
+| `tasks_list` | List tasks in a specific project |
+| `tasks_list_all` | List tasks across all projects with subtask visibility |
+| `task_get` | Get full task details including subtasks |
+| `task_create` | Create a new task |
+| `task_update` | Update task fields or move to a different project (`projectId`) |
+| `task_complete` | Mark a task as complete |
+| `task_delete` | Delete a task (requires `ENABLE_TASK_DELETE=true`) |
+| `tasks_bulk_update` | Update one field across multiple tasks |
 
 ### Projects
-- `projects_list` - List all projects
-- `project_get` - Get project details
-- `project_create` - Create new project
-- `project_update` - Update project
-- `project_archive` - Archive project
-- `project_delete` - Delete project (requires opt-in)
-- `project_duplicate` - Duplicate project with contents
+| Tool | Description |
+|------|-------------|
+| `projects_list` | List all projects |
+| `project_get` | Get project details |
+| `project_create` | Create a project |
+| `project_update` | Update a project |
+| `project_archive` | Archive a project |
+| `project_delete` | Delete a project (requires `ENABLE_PROJECT_DELETE=true`) |
+| `project_duplicate` | Duplicate a project with its tasks |
 
 ### Labels
-- `labels_list` - List all labels
-- `label_get` - Get label details
-- `label_create` - Create new label
-- `label_update` - Update label
-- `label_delete` - Delete label (requires opt-in)
-- `label_add_to_task` - Add label to task
-- `label_remove_from_task` - Remove label from task
-- `labels_bulk_set_on_task` - Set all labels on task
+`labels_list`, `label_get`, `label_create`, `label_update`, `label_delete`, `label_add_to_task`, `label_remove_from_task`, `labels_bulk_set_on_task`
 
 ### Collaboration
-- Comments: `comments_list`, `comments_get`, `comments_create`, `comments_update`, `comments_delete`
-- Assignees: `assignees_list`, `assignees_add`, `assignees_add_bulk`, `assignees_remove`
-- Relations: `relations_create`, `relations_delete`
+- **Comments:** `comments_list`, `comment_get`, `comment_create`, `comment_update`, `comment_delete`
+- **Assignees:** `assignees_list`, `assignee_add`, `assignees_add_bulk`, `assignee_remove`
+- **Relations:** `relation_create`, `relation_delete`
 
 ### Advanced
-- Project Views: `views_list`, `views_get`, `views_create`, `views_update`, `views_delete`
-- Kanban Buckets: `buckets_list`, `buckets_create`, `buckets_update`, `buckets_delete`
-- Saved Filters: `filter_get`, `filter_create`, `filter_update`, `filter_delete`
-- Notifications: `notifications_list`, `notifications_get`, `notifications_delete`
-- Subscriptions: `subscription_get`, `subscription_create`, `subscription_delete`
+- **Kanban:** `views_list`, `view_get`, `view_create`, `view_update`, `view_delete`, `buckets_list`, `bucket_create`, `bucket_update`, `bucket_delete`
+- **Filters:** `filter_get`, `filter_create`, `filter_update`, `filter_delete`
+- **Notifications:** `notifications_list`, `notification_get`, `notification_delete`
+- **Subscriptions:** `subscription_get`, `subscription_create`, `subscription_delete`
 
-## Troubleshooting
+---
 
-### Connection Issues
+## Docker security
 
-If the server fails to connect:
-- Verify `VIKUNJA_URL` includes `/api/v1` at the end
-- Check your Vikunja API token is valid
-- Ensure your Vikunja instance is accessible
+The container is hardened by default:
 
-### SSL Certificate Errors
+- Runs as non-root user `mcp`
+- Read-only root filesystem (`read_only: true`)
+- All Linux capabilities dropped (`cap_drop: ALL`)
+- No privilege escalation (`no-new-privileges:true`)
+- Memory limit: 256MB, CPU limit: 0.5 cores
+- Pinned base image: `node:20.19-alpine3.22`
 
-For self-signed certificates, add to your configuration:
+---
+
+## Vikunja v1.0.0 compatibility
+
+Vikunja v1.0.0 renamed the `GET /tasks/all` endpoint to `GET /tasks`. This fork patches both affected methods in the client so existing tool code works without changes. If you are on an older Vikunja version and see 404 errors on task listing, revert `src/client.ts` lines 138 and 436 back to `/tasks/all`.
+
+---
+
+## Safety controls
+
+Vikunja has no trash or recovery. Destructive operations are disabled by default:
+
+| Operation | Default | Enable with |
+|-----------|---------|-------------|
+| `task_delete` | Marks complete instead | `ENABLE_TASK_DELETE=true` |
+| `project_delete` | Archives instead | `ENABLE_PROJECT_DELETE=true` |
+| `label_delete` | Blocked | `ENABLE_LABEL_DELETE=true` |
+
+---
+
+## Development
 
 ```bash
-VERIFY_SSL=false
+npm install
+npm run dev       # stdio mode with hot reload
+PORT=8000 npm run dev  # HTTP mode with hot reload
+npm run build
+npm run typecheck
 ```
 
-## Safety Controls
-
-Vikunja has no trash or recovery system. This server implements safety controls to prevent accidental data loss.
-
-### Default Behavior
-
-All destructive operations are disabled by default:
-
-| Operation | Default Behavior | Alternative |
-|-----------|-----------------|-------------|
-| `project_delete` | Archives the project | Use `project_archive` |
-| `task_delete` | Marks task as completed | Use `task_complete` |
-| `label_delete` | Operation blocked | Use `label_update` |
-
-### Enabling Destructive Operations
-
-To enable permanent deletion, add to your environment configuration:
-
-```bash
-ENABLE_PROJECT_DELETE=true  # Deletes project and all tasks
-ENABLE_LABEL_DELETE=true    # Removes label from all tasks
-ENABLE_TASK_DELETE=true     # Permanently deletes tasks
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
+---
 
 ## License
 
-MIT © [aimbit GmbH](https://aimbit.de)
+MIT — original work © [aimbit GmbH](https://aimbit.de), modifications in this fork are also MIT.
 
-See [LICENSE](LICENSE) file for details.
-
-## Links
-
-- [GitHub Repository](https://github.com/aimbitgmbh/vikunja-mcp)
-- [npm Package](https://npmjs.com/package/@aimbitgmbh/vikunja-mcp)
-- [Report Issues](https://github.com/aimbitgmbh/vikunja-mcp/issues)
-- [Vikunja Project](https://vikunja.io/)
+- [Original repository](https://github.com/aimbitgmbh/vikunja-mcp)
+- [Vikunja](https://vikunja.io/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [aimbit GmbH](https://aimbit.de)
