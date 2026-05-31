@@ -12,8 +12,18 @@ import { RelationKind } from '../types.js';
 // =============================================================================
 
 const RelationCreateSchema = z.object({
-  taskId: z.number().describe('Source task ID'),
-  otherTaskId: z.number().describe('Related task ID'),
+  taskId: z.number().describe(
+    'The PRIMARY task ID — direction depends on relationKind. ' +
+    'For "subtask": taskId is the PARENT, otherTaskId becomes the child/subtask. ' +
+    'For "parenttask": taskId is the CHILD, otherTaskId becomes its parent. ' +
+    'For "blocking": taskId blocks otherTaskId. ' +
+    'Example to make task 20 a subtask of task 5: taskId=5, otherTaskId=20, relationKind="subtask".'
+  ),
+  otherTaskId: z.number().describe(
+    'The SECONDARY task ID. ' +
+    'For "subtask": this task becomes the child (subtask) of taskId. ' +
+    'For "parenttask": this task becomes the parent of taskId.'
+  ),
   relationKind: z.enum([
     'subtask',
     'parenttask',
@@ -26,7 +36,12 @@ const RelationCreateSchema = z.object({
     'follows',
     'copiedfrom',
     'copiedto',
-  ]).describe('Type of relationship'),
+  ]).describe(
+    'Type of relationship. ' +
+    '"subtask" = otherTaskId is a child of taskId. ' +
+    '"parenttask" = otherTaskId is the parent of taskId. ' +
+    '"related" = bidirectional loose relation.'
+  ),
 });
 
 const RelationDeleteSchema = z.object({
@@ -175,11 +190,11 @@ const RelationCreateJsonSchema = {
   properties: {
     taskId: {
       type: 'number' as const,
-      description: 'Source task ID',
+      description: 'PRIMARY task. For "subtask": this is the PARENT. For "parenttask": this is the CHILD. Example: to make task 20 a subtask of task 5, use taskId=5, otherTaskId=20, relationKind="subtask".',
     },
     otherTaskId: {
       type: 'number' as const,
-      description: 'Related task ID',
+      description: 'SECONDARY task. For "subtask": this task becomes the child/subtask. For "parenttask": this task becomes the parent.',
     },
     relationKind: {
       type: 'string' as const,
@@ -196,7 +211,7 @@ const RelationCreateJsonSchema = {
         'copiedfrom',
         'copiedto',
       ],
-      description: 'Type of relationship: subtask, parenttask, related, duplicateof, duplicates, blocking, blocked, precedes, follows, copiedfrom, copiedto',
+      description: '"subtask" = otherTaskId becomes a child of taskId. "parenttask" = otherTaskId becomes the parent of taskId. "related" = bidirectional loose link.',
     },
   },
   required: ['taskId', 'otherTaskId', 'relationKind'],
@@ -207,11 +222,11 @@ const RelationDeleteJsonSchema = {
   properties: {
     taskId: {
       type: 'number' as const,
-      description: 'Source task ID',
+      description: 'PRIMARY task ID — same value used when the relation was created.',
     },
     otherTaskId: {
       type: 'number' as const,
-      description: 'Related task ID',
+      description: 'SECONDARY task ID — same value used when the relation was created.',
     },
     relationKind: {
       type: 'string' as const,
@@ -228,7 +243,7 @@ const RelationDeleteJsonSchema = {
         'copiedfrom',
         'copiedto',
       ],
-      description: 'Type of relationship to remove',
+      description: 'Exact relation kind to remove — must match what was used when creating.',
     },
   },
   required: ['taskId', 'otherTaskId', 'relationKind'],
