@@ -288,7 +288,14 @@ export class VikunjaClient {
         console.error(`[Client] Bulk label endpoint requires JWT — falling back to individual adds`);
         const results: Label[] = [];
         for (const labelId of labelIds) {
-          await this.request('PUT', `/tasks/${taskId}/labels`, { label_id: labelId });
+          try {
+            await this.request('PUT', `/tasks/${taskId}/labels`, { label_id: labelId });
+          } catch (addError) {
+            // 400 "already exists" is fine — label is on the task, which is what we want
+            if (!(addError instanceof Error && addError.message.includes('400'))) {
+              throw addError;
+            }
+          }
           results.push({ id: labelId } as Label);
         }
         return results;
