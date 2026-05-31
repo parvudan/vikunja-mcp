@@ -175,11 +175,21 @@ export async function relationDelete(client: VikunjaClient, args: unknown): Prom
     await client.deleteRelation(params.taskId, params.relationKind, params.otherTaskId);
 
     const lines: string[] = [];
-    lines.push(`Removed relationship between tasks`);
+    lines.push(`Removed relationship`);
     lines.push('');
-    lines.push(`Task A: "${task1.title}" (ID: ${params.taskId})`);
-    lines.push(`  no longer ${formatRelationKind(params.relationKind)}`);
-    lines.push(`Task B: "${task2.title}" (ID: ${params.otherTaskId})`);
+
+    if (params.relationKind === 'subtask') {
+      lines.push(`Former PARENT: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`Former SUBTASK (child): "${task2.title}" (ID: ${params.otherTaskId})`);
+    } else if (params.relationKind === 'parenttask') {
+      lines.push(`Former CHILD: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`Former PARENT: "${task2.title}" (ID: ${params.otherTaskId})`);
+    } else {
+      lines.push(`Task A: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`  no longer ${formatRelationKind(params.relationKind)}`);
+      lines.push(`Task B: "${task2.title}" (ID: ${params.otherTaskId})`);
+    }
+
     lines.push('');
     lines.push(`Removed: ${params.relationKind} relationship`);
 
