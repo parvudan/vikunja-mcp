@@ -1,0 +1,36 @@
+services:
+  vikunja-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: aimbit-vikunja-mcp:latest
+    ports:
+      - "8000:8000"
+    environment:
+      VIKUNJA_URL: ${VIKUNJA_URL}
+      VIKUNJA_API_TOKEN: ${VIKUNJA_API_TOKEN}
+      VERIFY_SSL: ${VERIFY_SSL:-true}
+      ENABLE_TASK_DELETE: ${ENABLE_TASK_DELETE:-false}
+      ENABLE_PROJECT_DELETE: ${ENABLE_PROJECT_DELETE:-false}
+      ENABLE_LABEL_DELETE: ${ENABLE_LABEL_DELETE:-false}
+      PORT: "8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped

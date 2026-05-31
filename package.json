@@ -1,0 +1,67 @@
+{
+  "name": "@aimbitgmbh/vikunja-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Vikunja task management",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "bin": {
+    "vikunja-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "docs/api-spec.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "tsx --import dotenv/config src/index.ts",
+    "build": "tsc && chmod +x dist/index.js",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build",
+    "inspector": "npx @modelcontextprotocol/inspector tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "ai-assistant",
+    "ai-integration",
+    "vikunja",
+    "tasks",
+    "todo",
+    "productivity",
+    "task-management",
+    "project-management",
+    "kanban",
+    "collaboration"
+  ],
+  "author": {
+    "name": "aimbit GmbH",
+    "email": "info@aimbit.de",
+    "url": "https://aimbit.de"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aimbitgmbh/vikunja-mcp"
+  },
+  "homepage": "https://github.com/aimbitgmbh/vikunja-mcp",
+  "bugs": {
+    "url": "https://github.com/aimbitgmbh/vikunja-mcp/issues",
+    "email": "info@aimbit.de"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "dotenv": "^16.4.7",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
