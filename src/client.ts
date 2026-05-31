@@ -273,12 +273,28 @@ export class VikunjaClient {
   }
 
   /**
-   * Set all labels on a task at once (bulk operation)
+   * Set all labels on a task at once.
+   * The bulk endpoint requires JWT auth and rejects API tokens in Vikunja v1.0.0+,
+   * so we fall back to individual adds automatically.
    */
   async bulkSetLabelsOnTask(taskId: number, labelIds: number[]): Promise<Label[]> {
-    const labels = labelIds.map(id => ({ id }));
-    const response = await this.request<{ labels: Label[] }>('POST', `/tasks/${taskId}/labels/bulk`, { labels });
-    return response.labels;
+    try {
+      const labels = labelIds.map(id => ({ id }));
+      const response = await this.request<{ labels: Label[] }>('POST', `/tasks/${taskId}/labels/bulk`, { labels });
+      return response.labels;
+    } catch (error) {
+      // Vikunja v1.0.0+: bulk label endpoint requires JWT, falls back to individual adds
+      if (error instanceof Error && error.message.includes('401')) {
+        console.error(`[Client] Bulk label endpoint requires JWT — falling back to individual adds`);
+        const results: Label[] = [];
+        for (const labelId of labelIds) {
+          await this.request('PUT', `/tasks/${taskId}/labels`, { label_id: labelId });
+          results.push({ id: labelId } as Label);
+        }
+        return results;
+      }
+      throw error;
+    }
   }
 
   // ============================================================================
