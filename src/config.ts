@@ -55,3 +55,8 @@ function loadConfig(): Config {
  * Global configuration instance
  */
 export const config = loadConfig();
+
+/**
+ * Web app base URL derived from the API URL (strips /api/v1 suffix)
+ */
+export const webBaseUrl = config.apiUrl.replace(/\/api\/v1\/?$/, '');

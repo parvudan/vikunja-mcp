@@ -7,7 +7,7 @@ import { z } from 'zod';
 import type { VikunjaClient } from '../client.js';
 import type { Task } from '../types.js';
 import { formatTask, formatTaskList, formatBeforeAfter, parseDate, formatDate } from './helpers.js';
-import { config } from '../config.js';
+import { config, webBaseUrl } from '../config.js';
 
 // =============================================================================
 // Zod Schemas (for runtime validation)
@@ -143,7 +143,7 @@ export async function tasksList(client: VikunjaClient, args: unknown): Promise<s
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
-    return formatTaskList(filtered, params.limit);
+    return formatTaskList(filtered, params.limit, webBaseUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to list tasks: ${message}`);
@@ -223,7 +223,7 @@ export async function tasksListAll(client: VikunjaClient, args: unknown): Promis
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
-    return formatTaskList(filtered, params.limit);
+    return formatTaskList(filtered, params.limit, webBaseUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to list all tasks: ${message}`);
@@ -238,7 +238,7 @@ export async function taskGet(client: VikunjaClient, args: unknown): Promise<str
 
   try {
     const task = await client.getTask(params.id);
-    return formatTask(task);
+    return formatTask(task, webBaseUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to get task: ${message}`);

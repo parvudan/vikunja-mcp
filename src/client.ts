@@ -119,7 +119,9 @@ export class VikunjaClient {
       return (await response.json()) as T;
     } catch (error) {
       if (error instanceof Error) {
-        console.error(`[Client] Request failed: ${error.message}`);
+        const cause = (error as any).cause;
+        const causeStr = cause instanceof Error ? cause.message : (cause ? String(cause) : null);
+        console.error(`[Client] Request failed: ${error.message}${causeStr ? ` (${causeStr})` : ''}`);
         throw error;
       }
       throw new Error(`Unknown error during API request: ${String(error)}`);

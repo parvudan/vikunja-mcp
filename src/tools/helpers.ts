@@ -43,7 +43,7 @@ export function formatPriority(priority: number): string {
 /**
  * Format a task for display (content-first, ID last pattern)
  */
-export function formatTask(task: Task): string {
+export function formatTask(task: Task, webBaseUrl?: string): string {
   const lines: string[] = [];
 
   // Title (most important)
@@ -97,9 +97,12 @@ export function formatTask(task: Task): string {
     });
   }
 
-  // ID at the end
+  // ID and URL at the end
   lines.push('');
   lines.push(`[Task ID: ${task.id}, Project ID: ${task.project_id}]`);
+  if (webBaseUrl) {
+    lines.push(`URL: ${webBaseUrl}/tasks/${task.id}`);
+  }
 
   return lines.join('\n');
 }
@@ -107,7 +110,7 @@ export function formatTask(task: Task): string {
 /**
  * Format a list of tasks for display
  */
-export function formatTaskList(tasks: Task[], limit?: number): string {
+export function formatTaskList(tasks: Task[], limit?: number, webBaseUrl?: string): string {
   if (tasks.length === 0) {
     return 'No tasks found.';
   }
@@ -146,7 +149,8 @@ export function formatTaskList(tasks: Task[], limit?: number): string {
       lines.push(`   ${info.join(' | ')}`);
     }
 
-    lines.push(`   [Task ID: ${task.id}, Project ID: ${task.project_id}]`);
+    const urlSuffix = webBaseUrl ? ` ${webBaseUrl}/tasks/${task.id}` : '';
+    lines.push(`   [Task ID: ${task.id}, Project ID: ${task.project_id}]${urlSuffix}`);
 
     // Show subtasks inline
     if (subtasks && subtasks.length > 0) {
