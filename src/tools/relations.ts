@@ -132,15 +132,24 @@ export async function relationCreate(client: VikunjaClient, args: unknown): Prom
     });
 
     const lines: string[] = [];
-    lines.push(`Created relationship between tasks`);
+    lines.push(`Created relationship`);
     lines.push('');
-    lines.push(`Task A: "${task1.title}" (ID: ${params.taskId})`);
-    lines.push(`  ${formatRelationKind(params.relationKind)}`);
-    lines.push(`Task B: "${task2.title}" (ID: ${params.otherTaskId})`);
+
+    // Use explicit role labels to avoid ambiguity
+    if (params.relationKind === 'subtask') {
+      lines.push(`PARENT: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`SUBTASK (child): "${task2.title}" (ID: ${params.otherTaskId})`);
+    } else if (params.relationKind === 'parenttask') {
+      lines.push(`CHILD: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`PARENT: "${task2.title}" (ID: ${params.otherTaskId})`);
+    } else {
+      lines.push(`Task A: "${task1.title}" (ID: ${params.taskId})`);
+      lines.push(`  ${formatRelationKind(params.relationKind)}`);
+      lines.push(`Task B: "${task2.title}" (ID: ${params.otherTaskId})`);
+    }
+
     lines.push('');
-    lines.push(`Relationship: ${getRelationExplanation(params.relationKind)}`);
-    lines.push('');
-    lines.push('TIP: Use tasks_get with the task ID to see all related tasks.');
+    lines.push('TIP: Use task_get to confirm the relation appears correctly.');
 
     return lines.join('\n');
   } catch (error) {
