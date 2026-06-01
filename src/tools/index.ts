@@ -144,17 +144,20 @@ import { bucketTools } from './buckets.js';
  */
 export function getToolDefinitions() {
   return [
+    // Core — always enabled
     ...taskTools,
     ...projectTools,
     ...labelTools,
+    ...relationTools,
+    // Collaboration — enable if needed
     ...commentTools,
     ...assigneeTools,
-    ...relationTools,
-    ...filterTools,
-    ...notificationTools,
-    ...subscriptionTools,
-    ...infoTools,
-    ...viewTools,
-    ...bucketTools,
+    // Disabled — uncomment to re-enable
+    // ...filterTools,
+    // ...notificationTools,
+    // ...subscriptionTools,
+    // ...infoTools,
+    // ...viewTools,
+    // ...bucketTools,
   ];
 }
