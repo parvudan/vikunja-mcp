@@ -150,11 +150,12 @@ export function getToolDefinitions() {
     ...commentTools,
     ...assigneeTools,
     ...relationTools,
-    ...filterTools,
-    ...notificationTools,
-    ...subscriptionTools,
-    ...infoTools,
-    ...viewTools,
-    ...bucketTools,
+    // Disabled — uncomment to re-enable
+    // ...filterTools,
+    // ...notificationTools,
+    // ...subscriptionTools,
+    // ...infoTools,
+    // ...viewTools,
+    // ...bucketTools,
   ];
 }
